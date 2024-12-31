@@ -1,12 +1,21 @@
-import { useEffect, useState } from 'react';
-import { Box, Typography, Paper, Avatar, Chip, IconButton, Divider } from '@mui/material';
+import { useEffect, useState, useRef } from 'react';
+import { Box, Typography, Paper, Avatar, Chip, IconButton, Divider, useTheme } from '@mui/material';
 import ReactMarkdown from 'react-markdown';
 import ThumbUpOutlinedIcon from '@mui/icons-material/ThumbUpOutlined';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import BookmarkBorderOutlinedIcon from '@mui/icons-material/BookmarkBorderOutlined';
+import { generateTechHeaders } from '../utils/contentTransformer';
+import AdBanner from './AdBanner';
+import SideAd from './SideAd';
 
 interface BlogPostProps {
   content: string;
+}
+
+interface TocItem {
+  text: string;
+  level: number;
+  id: string;
 }
 
 const calculateReadingTime = (text: string): number => {
@@ -20,16 +29,76 @@ const generateRandomStats = () => ({
   likes: Math.floor(Math.random() * 100) + 10,
 });
 
-const BlogPost = ({ content }: BlogPostProps) => {
-  const [toc, setToc] = useState<string[]>([]);
+const BlogPost = ({ content: initialContent }: BlogPostProps) => {
+  const theme = useTheme();
+  const [toc, setToc] = useState<TocItem[]>([]);
+  const [content, setContent] = useState('');
+  const [activeSection, setActiveSection] = useState<string>('');
   const readingTime = calculateReadingTime(content);
   const stats = generateRandomStats();
+  const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const lines = content.split('\n');
-    const headers = lines.filter(line => line.startsWith('#') || /^[^\s].+\n[=\-]{2,}/.test(line));
+    const transformedContent = generateTechHeaders(initialContent);
+    setContent(transformedContent);
+
+    // Generate TOC with IDs
+    const lines = transformedContent.split('\n');
+    const headers = lines
+      .filter(line => line.startsWith('#'))
+      .map(header => {
+        const level = header.match(/^#+/)?.[0].length || 1;
+        const text = header.replace(/^#+\s/, '');
+        const id = text.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+        return { text, level, id };
+      });
     setToc(headers);
-  }, [content]);
+  }, [initialContent]);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (contentRef.current) {
+        const headings = contentRef.current.querySelectorAll('h1, h2, h3, h4, h5, h6');
+        let currentSection = '';
+        
+        for (const heading of headings) {
+          const rect = heading.getBoundingClientRect();
+          if (rect.top <= 100) {
+            currentSection = heading.id;
+          } else {
+            break;
+          }
+        }
+        
+        setActiveSection(currentSection);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const contentParts = content.split('\n\n');
+  const contentWithAds = contentParts.reduce((acc: JSX.Element[], part, index) => {
+    // Add header IDs for scrolling
+    const partWithIds = part.replace(/^(#{1,6})\s(.+)$/gm, (match, hashes, title) => {
+      const id = title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      return `${hashes} ${title} {#${id}}`;
+    });
+
+    acc.push(
+      <ReactMarkdown key={index}>
+        {partWithIds}
+      </ReactMarkdown>
+    );
+    
+    // Randomly insert ads (approximately every 4-7 paragraphs)
+    if (index > 0 && index % Math.floor(Math.random() * 4 + 4) === 0) {
+      acc.push(<AdBanner key={`ad-${index}`} />);
+    }
+    
+    return acc;
+  }, []);
 
   return (
     <Box sx={{ display: 'flex', gap: 4, width: '100%' }}>
@@ -37,30 +106,37 @@ const BlogPost = ({ content }: BlogPostProps) => {
       <Paper
         elevation={0}
         sx={{
-          width: 250,
+          width: { md: 200, lg: 250 },
           p: 2,
           position: 'sticky',
-          top: 20,
-          maxHeight: 'calc(100vh - 40px)',
+          top: 80,
+          maxHeight: 'calc(100vh - 100px)',
           overflowY: 'auto',
           display: { xs: 'none', md: 'block' },
-          backgroundColor: 'white',
+          flexShrink: 0,
         }}
       >
-        <Typography variant="h6" gutterBottom>
+        <Typography variant="h6" gutterBottom sx={{ mb: 3 }}>
           목차
         </Typography>
-        {toc.map((header, index) => (
+        {toc.map((item, index) => (
           <Typography
             key={index}
             variant="body2"
+            component="a"
+            href={`#${item.id}`}
             sx={{
+              display: 'block',
               mb: 1,
+              pl: (item.level - 1) * 2,
               cursor: 'pointer',
+              textDecoration: 'none',
+              color: activeSection === item.id ? 'primary.main' : 'text.primary',
+              fontWeight: activeSection === item.id ? 700 : 400,
               '&:hover': { color: 'primary.main' },
             }}
           >
-            {header.replace(/^#+\s/, '')}
+            {item.text}
           </Typography>
         ))}
       </Paper>
@@ -70,9 +146,9 @@ const BlogPost = ({ content }: BlogPostProps) => {
         elevation={1}
         sx={{
           flex: 1,
-          maxWidth: 800,
-          p: 4,
-          backgroundColor: 'white',
+          minWidth: 0,
+          maxWidth: { md: '100%', lg: 900, xl: 1000 },
+          p: { xs: 2, md: 4 },
         }}
       >
         {/* Article metadata */}
@@ -108,32 +184,35 @@ const BlogPost = ({ content }: BlogPostProps) => {
 
         <Divider sx={{ my: 3 }} />
         
-        <Box sx={{
-          '& h1': { mb: 4, mt: 6 },
-          '& h2': { mb: 3, mt: 4 },
-          '& p': { mb: 2, lineHeight: 1.8 },
-          '& code': {
-            backgroundColor: 'grey.100',
-            p: 0.5,
-            borderRadius: 1,
-            fontFamily: 'monospace',
-          },
-          '& pre': {
-            backgroundColor: 'grey.100',
-            p: 2,
-            borderRadius: 1,
-            overflowX: 'auto',
-          },
-          '& blockquote': {
-            borderLeft: '4px solid',
-            borderColor: 'primary.main',
-            pl: 2,
-            py: 1,
-            my: 2,
-            backgroundColor: 'grey.50',
-          },
-        }}>
-          <ReactMarkdown>{content}</ReactMarkdown>
+        <Box 
+          ref={contentRef}
+          sx={{
+            '& h1': { mb: 4, mt: 6, scrollMarginTop: '80px' },
+            '& h2': { mb: 3, mt: 4, scrollMarginTop: '80px' },
+            '& p': { mb: 2, lineHeight: 1.8 },
+            '& code': {
+              backgroundColor: theme.palette.mode === 'light' ? 'grey.100' : 'grey.900',
+              p: 0.5,
+              borderRadius: 1,
+              fontFamily: 'monospace',
+            },
+            '& pre': {
+              backgroundColor: theme.palette.mode === 'light' ? 'grey.100' : 'grey.900',
+              p: 2,
+              borderRadius: 1,
+              overflowX: 'auto',
+            },
+            '& blockquote': {
+              borderLeft: '4px solid',
+              borderColor: 'primary.main',
+              pl: 2,
+              py: 1,
+              my: 2,
+              backgroundColor: theme.palette.mode === 'light' ? 'grey.50' : 'grey.900',
+            },
+          }}
+        >
+          {contentWithAds}
         </Box>
 
         {/* Article actions */}
@@ -152,6 +231,17 @@ const BlogPost = ({ content }: BlogPostProps) => {
           </Typography>
         </Box>
       </Paper>
+
+      {/* Right sidebar with ads */}
+      <Box
+        sx={{
+          width: { lg: 250, xl: 300 },
+          display: { xs: 'none', lg: 'block' },
+          flexShrink: 0,
+        }}
+      >
+        <SideAd />
+      </Box>
     </Box>
   );
 };
