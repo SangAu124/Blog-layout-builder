@@ -101,6 +101,11 @@ const BlogPost = ({ content: initialContent }: BlogPostProps) => {
   });
 
   // 나머지 컨텐츠 처리
+  const codeBlockStyle = {
+    backgroundColor: theme.palette.mode === 'dark' ? '#1a1a1a' : '#f6f8fa',
+    color: theme.palette.mode === 'dark' ? '#e6edf3' : '#24292e',
+  };
+
   remainingContent = contentParts.reduce((acc: JSX.Element[], part, index) => {
     // Add header IDs for scrolling
     const partWithIds = part.replace(/^(#{1,6})\s(.+)$/gm, (_, hashes, title) => {
@@ -118,13 +123,28 @@ const BlogPost = ({ content: initialContent }: BlogPostProps) => {
               <SyntaxHighlighter
                 language={match[1]}
                 PreTag="div"
-                customStyle={{}}
+                style={theme.palette.mode === 'dark' ? atomOneDark : undefined}
+                customStyle={{
+                  ...codeBlockStyle,
+                  padding: '1rem',
+                  borderRadius: '4px',
+                  margin: '1rem 0',
+                }}
                 {...props}
               >
                 {String(children).replace(/\n$/, '')}
               </SyntaxHighlighter>
             ) : (
-              <code className={className} {...props}>
+              <code
+                className={className}
+                style={{
+                  backgroundColor: theme.palette.mode === 'dark' ? '#2f3542' : '#f1f2f6',
+                  padding: '0.2em 0.4em',
+                  borderRadius: '3px',
+                  color: theme.palette.mode === 'dark' ? '#e6edf3' : '#24292e',
+                }}
+                {...props}
+              >
                 {children}
               </code>
             );
