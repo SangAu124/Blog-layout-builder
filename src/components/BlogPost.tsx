@@ -112,13 +112,13 @@ const BlogPost = ({ content: initialContent }: BlogPostProps) => {
       <ReactMarkdown
         key={`content-${index}`}
         components={{
-          code({ node, inline, className, children, ...props }) {
+          code({ node, inline, className, children, ...props }: any) {
             const match = /language-(\w+)/.exec(className || '');
             return !inline && match ? (
               <SyntaxHighlighter
                 language={match[1]}
                 PreTag="div"
-                style={atomOneDark}
+                customStyle={{}}
                 {...props}
               >
                 {String(children).replace(/\n$/, '')}
@@ -129,7 +129,7 @@ const BlogPost = ({ content: initialContent }: BlogPostProps) => {
               </code>
             );
           },
-          blockquote: ({ node, children, ...props }) => (
+          blockquote: ({ node, children, ...props }: any) => (
             <Box
               component="blockquote"
               sx={{
@@ -149,12 +149,12 @@ const BlogPost = ({ content: initialContent }: BlogPostProps) => {
             </Box>
           ),
           // tip, warning, info 등의 커스텀 컨테이너 처리
-          div: ({ node, className, children, ...props }) => {
-            const match = /language-(\w+)/.exec(className || '');
+          div: ({ children, className, ...props }: any) => {
             if (className?.includes('tip') || className?.includes('warning') || className?.includes('info')) {
               const type = className?.split('-')[1] || 'tip';
               return (
                 <Box
+                  component="div"
                   sx={{
                     p: 2,
                     my: 2,
