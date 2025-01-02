@@ -3,6 +3,7 @@ import CodeIcon from '@mui/icons-material/Code';
 
 const Navbar = () => {
   const theme = useTheme();
+  const textColor = theme.palette.mode === 'light' ? 'text.primary' : '#fff';
 
   return (
     <AppBar 
@@ -21,14 +22,35 @@ const Navbar = () => {
             Tech Blog
           </Typography>
           <Box sx={{ ml: 4, display: { xs: 'none', md: 'flex' }, gap: 2 }}>
-            <Button color="inherit">최신글</Button>
-            <Button color="inherit">트렌딩</Button>
-            <Button color="inherit">태그</Button>
+            <Button sx={{ color: textColor }}>최신글</Button>
+            <Button sx={{ color: textColor }}>트렌딩</Button>
+            <Button sx={{ color: textColor }}>태그</Button>
           </Box>
         </Box>
         <Box sx={{ display: 'flex', gap: 2 }}>
-          <Button variant="outlined" size="small">로그인</Button>
-          <Button variant="contained" size="small">시작하기</Button>
+          <Button 
+            variant="outlined" 
+            size="small" 
+            sx={{ 
+              color: textColor,
+              borderColor: theme.palette.mode === 'light' ? 'text.primary' : '#fff'
+            }}
+          >
+            로그인
+          </Button>
+          <Button 
+            variant="contained" 
+            size="small"
+            sx={{
+              bgcolor: theme.palette.mode === 'light' ? 'text.primary' : 'primary.main',
+              color: theme.palette.mode === 'light' ? '#fff' : '#fff',
+              '&:hover': {
+                bgcolor: theme.palette.mode === 'light' ? 'text.secondary' : 'primary.dark',
+              }
+            }}
+          >
+            시작하기
+          </Button>
         </Box>
       </Toolbar>
     </AppBar>

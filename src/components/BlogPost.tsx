@@ -7,6 +7,7 @@ import BookmarkBorderOutlinedIcon from '@mui/icons-material/BookmarkBorderOutlin
 import { generateTechHeaders } from '../utils/contentTransformer';
 import AdBanner from './AdBanner';
 import SideAd from './SideAd';
+import ShareButtons from './ShareButtons';
 
 interface BlogPostProps {
   content: string;
@@ -92,8 +93,14 @@ const BlogPost = ({ content: initialContent }: BlogPostProps) => {
       </ReactMarkdown>
     );
     
-    // Randomly insert ads (approximately every 4-7 paragraphs)
-    if (index > 0 && index % Math.floor(Math.random() * 4 + 4) === 0) {
+    // 첫 광고는 15줄 이후에 표시하고, 그 다음부터는 18-23줄 간격으로 랜덤하게 표시
+    const minLines = 15;
+    const randomInterval = Math.floor(Math.random() * 6 + 20); // 18-23 사이의 랜덤 값
+    
+    if (
+      (index === minLines) || // 첫 광고는 정확히 15줄 후에
+      (index > minLines && (index - minLines) % randomInterval === 0) // 그 이후는 랜덤 간격으로
+    ) {
       acc.push(<AdBanner key={`ad-${index}`} />);
     }
     
@@ -114,31 +121,67 @@ const BlogPost = ({ content: initialContent }: BlogPostProps) => {
           overflowY: 'auto',
           display: { xs: 'none', md: 'block' },
           flexShrink: 0,
+          '&::-webkit-scrollbar': {
+            width: '4px',
+          },
+          '&::-webkit-scrollbar-track': {
+            background: theme.palette.mode === 'light' ? '#f1f1f1' : '#2d2d2d',
+          },
+          '&::-webkit-scrollbar-thumb': {
+            background: theme.palette.mode === 'light' ? '#888' : '#555',
+            borderRadius: '4px',
+          },
         }}
       >
-        <Typography variant="h6" gutterBottom sx={{ mb: 3 }}>
+        <Typography variant="h6" gutterBottom sx={{ mb: 3, fontWeight: 700 }}>
           목차
         </Typography>
-        {toc.map((item, index) => (
-          <Typography
-            key={index}
-            variant="body2"
-            component="a"
-            href={`#${item.id}`}
-            sx={{
-              display: 'block',
-              mb: 1,
-              pl: (item.level - 1) * 2,
-              cursor: 'pointer',
-              textDecoration: 'none',
-              color: activeSection === item.id ? 'primary.main' : 'text.primary',
-              fontWeight: activeSection === item.id ? 700 : 400,
-              '&:hover': { color: 'primary.main' },
-            }}
-          >
-            {item.text}
-          </Typography>
-        ))}
+        <Box sx={{ 
+          borderLeft: '2px solid',
+          borderColor: theme.palette.mode === 'light' ? 'grey.200' : 'grey.800',
+          pl: 2,
+          ml: 1 
+        }}>
+          {toc.map((item, index) => (
+            <Typography
+              key={index}
+              variant="body2"
+              component="a"
+              href={`#${item.id}`}
+              sx={{
+                display: 'block',
+                mb: 1.5,
+                pl: (item.level - 2) * 2,
+                cursor: 'pointer',
+                textDecoration: 'none',
+                color: activeSection === item.id ? 'primary.main' : 'text.secondary',
+                fontWeight: activeSection === item.id ? 700 : 400,
+                fontSize: item.level === 2 ? '0.9rem' : '0.85rem',
+                transition: 'all 0.2s ease',
+                '&:hover': { 
+                  color: 'primary.main',
+                  pl: (item.level - 2) * 2 + 0.5,
+                },
+                position: 'relative',
+                ...(activeSection === item.id && {
+                  '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    left: -2,
+                    top: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    width: '6px',
+                    height: '6px',
+                    borderRadius: '50%',
+                    bgcolor: 'primary.main',
+                  }
+                })
+              }}
+            >
+              {item.text}
+            </Typography>
+          ))}
+        </Box>
       </Paper>
 
       {/* Main content */}
@@ -201,6 +244,21 @@ const BlogPost = ({ content: initialContent }: BlogPostProps) => {
               p: 2,
               borderRadius: 1,
               overflowX: 'auto',
+              my: 3,
+              '& code': {
+                backgroundColor: 'transparent',
+                p: 0,
+                color: theme.palette.mode === 'light' ? '#24292e' : '#e6edf3',
+                display: 'block',
+                fontFamily: 'Consolas, Monaco, "Andale Mono", "Ubuntu Mono", monospace',
+                fontSize: '0.875rem',
+                lineHeight: 1.6,
+                whiteSpace: 'pre',
+                wordSpacing: 'normal',
+                wordBreak: 'normal',
+                wordWrap: 'normal',
+                tabSize: 2,
+              }
             },
             '& blockquote': {
               borderLeft: '4px solid',
@@ -231,6 +289,9 @@ const BlogPost = ({ content: initialContent }: BlogPostProps) => {
           </Typography>
         </Box>
       </Paper>
+
+      {/* Share buttons */}
+      <ShareButtons />
 
       {/* Right sidebar with ads */}
       <Box
