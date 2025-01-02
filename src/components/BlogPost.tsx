@@ -1,9 +1,21 @@
 import { useEffect, useState, useRef } from 'react';
-import { Box, Typography, Paper, Avatar, Chip, IconButton, Divider, useTheme } from '@mui/material';
+import { 
+  Box, 
+  Typography, 
+  Paper, 
+  Avatar, 
+  Chip, 
+  IconButton, 
+  Divider, 
+  useTheme,
+  Drawer,
+  Fab
+} from '@mui/material';
 import ReactMarkdown from 'react-markdown';
 import ThumbUpOutlinedIcon from '@mui/icons-material/ThumbUpOutlined';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import BookmarkBorderOutlinedIcon from '@mui/icons-material/BookmarkBorderOutlined';
+import MenuBookIcon from '@mui/icons-material/MenuBook';
 import { generateTechHeaders } from '../utils/contentTransformer';
 import AdBanner from './AdBanner';
 import SideAd from './SideAd';
@@ -37,6 +49,7 @@ const BlogPost = ({ content: initialContent }: BlogPostProps) => {
   const [toc, setToc] = useState<TocItem[]>([]);
   const [content, setContent] = useState('');
   const [activeSection, setActiveSection] = useState<string>('');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const readingTime = calculateReadingTime(content);
   const stats = generateRandomStats();
   const contentRef = useRef<HTMLDivElement>(null);
@@ -220,8 +233,14 @@ const BlogPost = ({ content: initialContent }: BlogPostProps) => {
   ];
 
   return (
-    <Box sx={{ display: 'flex', gap: 4, width: '100%' }}>
-      {/* Left sidebar with TOC */}
+    <Box sx={{ 
+      display: 'flex', 
+      gap: { xs: 2, md: 4 }, 
+      width: '100%', 
+      position: 'relative',
+      px: { xs: 1, sm: 2, md: 3 }
+    }}>
+      {/* Left sidebar with TOC - Desktop */}
       <Paper
         elevation={0}
         sx={{
@@ -229,9 +248,10 @@ const BlogPost = ({ content: initialContent }: BlogPostProps) => {
           p: 2,
           position: 'sticky',
           top: 80,
+          height: 'fit-content',
           maxHeight: 'calc(100vh - 100px)',
           overflowY: 'auto',
-          display: 'flex',
+          display: { xs: 'none', md: 'flex' },
           flexDirection: 'column',
           gap: 1,
           backgroundColor: 'background.paper',
@@ -243,23 +263,62 @@ const BlogPost = ({ content: initialContent }: BlogPostProps) => {
         <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
           목차
         </Typography>
-        {toc.length > 0 && (
-          <Box sx={{ 
-            position: 'relative',
-            '& > :first-of-type': {
-              position: 'sticky',
-              top: 0,
-              backgroundColor: 'background.paper',
-              zIndex: 1,
-              pb: 1,
-              borderBottom: '1px solid',
-              borderColor: 'divider',
-            }
-          }}>
+        <Box>
+          {toc.map((item) => (
+            <Typography
+              key={item.id}
+              variant="body2"
+              component="a"
+              href={`#${item.id}`}
+              onClick={(e) => {
+                e.preventDefault();
+                const element = document.getElementById(item.id);
+                if (element) {
+                  element.scrollIntoView({ behavior: 'smooth' });
+                }
+              }}
+              sx={{
+                display: 'block',
+                pl: item.level * 1.5,
+                py: 0.5,
+                color: activeSection === item.id ? 'primary.main' : 'text.primary',
+                textDecoration: 'none',
+                '&:hover': {
+                  color: 'primary.main',
+                  backgroundColor: 'action.hover',
+                },
+              }}
+            >
+              {item.text}
+            </Typography>
+          ))}
+        </Box>
+      </Paper>
+
+      {/* Mobile TOC Menu */}
+      <Drawer
+        anchor="right"
+        open={mobileMenuOpen}
+        onClose={() => setMobileMenuOpen(false)}
+        sx={{
+          display: { xs: 'block', md: 'none' },
+          '& .MuiDrawer-paper': {
+            width: '80%',
+            maxWidth: 300,
+            boxSizing: 'border-box',
+            p: 2,
+          },
+        }}
+      >
+        <Box sx={{ width: '100%' }}>
+          <Typography variant="h6" gutterBottom>
+            목차
+          </Typography>
+          <Box sx={{ mt: 2 }}>
             {toc.map((item) => (
               <Typography
-                key={item.id}
-                variant="body2"
+                key={`mobile-${item.id}`}
+                variant="body1"
                 component="a"
                 href={`#${item.id}`}
                 onClick={(e) => {
@@ -267,12 +326,13 @@ const BlogPost = ({ content: initialContent }: BlogPostProps) => {
                   const element = document.getElementById(item.id);
                   if (element) {
                     element.scrollIntoView({ behavior: 'smooth' });
+                    setMobileMenuOpen(false);
                   }
                 }}
                 sx={{
                   display: 'block',
                   pl: item.level * 1.5,
-                  py: 0.5,
+                  py: 1,
                   color: activeSection === item.id ? 'primary.main' : 'text.primary',
                   textDecoration: 'none',
                   '&:hover': {
@@ -285,8 +345,24 @@ const BlogPost = ({ content: initialContent }: BlogPostProps) => {
               </Typography>
             ))}
           </Box>
-        )}
-      </Paper>
+        </Box>
+      </Drawer>
+
+      {/* Mobile TOC Button */}
+      <Fab
+        color="primary"
+        aria-label="open menu"
+        onClick={() => setMobileMenuOpen(true)}
+        sx={{
+          position: 'fixed',
+          right: 20,
+          bottom: 20,
+          display: { xs: 'flex', md: 'none' },
+          zIndex: 1000,
+        }}
+      >
+        <MenuBookIcon />
+      </Fab>
 
       {/* Main content */}
       <Paper
@@ -294,8 +370,8 @@ const BlogPost = ({ content: initialContent }: BlogPostProps) => {
         sx={{
           flex: 1,
           minWidth: 0,
-          maxWidth: { md: '100%', lg: 900, xl: 1000 },
-          p: { xs: 2, md: 4 },
+          maxWidth: { xs: '100%', md: '100%', lg: 900, xl: 1000 },
+          p: { xs: 1.5, sm: 2, md: 4 },
         }}
       >
         {/* Article metadata */}
