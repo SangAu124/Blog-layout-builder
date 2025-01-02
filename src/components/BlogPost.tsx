@@ -256,7 +256,7 @@ const BlogPost = ({ content: initialContent }: BlogPostProps) => {
               borderColor: 'divider',
             }
           }}>
-            {toc.map((item, index) => (
+            {toc.map((item) => (
               <Typography
                 key={item.id}
                 variant="body2"
