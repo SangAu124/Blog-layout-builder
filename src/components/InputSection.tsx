@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Box, TextField, Typography, Button, Paper } from '@mui/material';
+import { Box, TextField, Button, Paper } from '@mui/material';
 
 interface InputSectionProps {
   onSubmit: (text: string) => void;

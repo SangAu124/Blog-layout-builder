@@ -161,7 +161,7 @@ export const generateTechHeaders = (content: string): string => {
 
   // 헤더 생성
   let headers: string[] = [];
-  selectedTopics.forEach((topic, index) => {
+  selectedTopics.forEach(topic => {
     headers.push(`## ${topic.title}`);
     
     // 글이 충분히 길면 서브토픽도 추가

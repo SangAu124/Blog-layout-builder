@@ -82,7 +82,7 @@ const BlogPost = ({ content: initialContent }: BlogPostProps) => {
   const contentParts = content.split('\n\n');
   const contentWithAds = contentParts.reduce((acc: JSX.Element[], part, index) => {
     // Add header IDs for scrolling
-    const partWithIds = part.replace(/^(#{1,6})\s(.+)$/gm, (match, hashes, title) => {
+    const partWithIds = part.replace(/^(#{1,6})\s(.+)$/gm, (_, hashes, title) => {
       const id = title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
       return `${hashes} ${title} {#${id}}`;
     });
