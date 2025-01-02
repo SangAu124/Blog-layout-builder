@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Box, TextField, Button, Paper } from '@mui/material';
+import { Box, TextField, Button, Paper, useTheme } from '@mui/material';
 
 interface InputSectionProps {
   onSubmit: (text: string) => void;
@@ -7,6 +7,7 @@ interface InputSectionProps {
 
 const InputSection = ({ onSubmit }: InputSectionProps) => {
   const [text, setText] = useState('');
+  const theme = useTheme();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,7 +23,7 @@ const InputSection = ({ onSubmit }: InputSectionProps) => {
         p: 4,
         mt: 4,
         borderRadius: 2,
-        backgroundColor: 'white',
+        backgroundColor: theme.palette.mode === 'dark' ? 'background.paper' : 'white',
       }}
     >
       <Box
@@ -47,7 +48,24 @@ const InputSection = ({ onSubmit }: InputSectionProps) => {
           fullWidth
           sx={{
             '& .MuiOutlinedInput-root': {
-              backgroundColor: 'white',
+              backgroundColor: theme.palette.mode === 'dark' ? 'background.default' : 'white',
+              color: theme.palette.mode === 'dark' ? 'text.primary' : 'inherit',
+              '& fieldset': {
+                borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.23)' : 'rgba(0, 0, 0, 0.23)',
+              },
+              '&:hover fieldset': {
+                borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.4)' : 'rgba(0, 0, 0, 0.4)',
+              },
+              '&.Mui-focused fieldset': {
+                borderColor: theme.palette.primary.main,
+              },
+            },
+            '& .MuiInputBase-input': {
+              color: theme.palette.mode === 'dark' ? 'text.primary' : 'inherit',
+              '&::placeholder': {
+                color: theme.palette.mode === 'dark' ? 'text.secondary' : 'rgba(0, 0, 0, 0.6)',
+                opacity: 1,
+              },
             },
           }}
         />
@@ -56,7 +74,14 @@ const InputSection = ({ onSubmit }: InputSectionProps) => {
           variant="contained"
           size="large"
           disabled={!text.trim()}
-          sx={{ alignSelf: 'flex-start' }}
+          sx={{ 
+            alignSelf: 'flex-start',
+            backgroundColor: theme.palette.mode === 'dark' ? 'primary.main' : undefined,
+            color: theme.palette.mode === 'dark' ? 'common.white' : undefined,
+            '&:hover': {
+              backgroundColor: theme.palette.mode === 'dark' ? 'primary.dark' : undefined,
+            },
+          }}
         >
           글 읽기 시작하기
         </Button>
