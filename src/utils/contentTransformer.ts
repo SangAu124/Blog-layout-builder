@@ -57,23 +57,193 @@ interface TocItem {
 const generateTableOfContents = (content: string): TocItem[] => {
   // 모든 헤딩 태그 찾기 (h1-h6)
   const headings = content.match(/^#{1,6}.+$/gm) || [];
-  
   // 각 헤딩을 TocItem으로 변환
   return headings.map(heading => {
     // '#' 개수로 레벨 결정
     const level = heading.match(/^#+/)[0].length;
-    
     // 헤딩 텍스트 추출
     const text = heading.replace(/^#+\\s/, '');
-    
     // URL 친화적인 ID 생성
     const id = text.toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-|-$/g, '');
-    
     return { text, level, id };
   });
 };`
+  },
+  {
+    language: 'javascript',
+    code: `// 이미지 레이지 로딩 구현
+const lazyLoadImages = () => {
+  const images = document.querySelectorAll('img[data-src]');
+  const imageObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const img = entry.target;
+        img.src = img.dataset.src;
+        img.removeAttribute('data-src');
+        imageObserver.unobserve(img);
+      }
+    });
+  });
+  images.forEach(img => imageObserver.observe(img));
+};`
+  },
+  {
+    language: 'python',
+    code: `# 데이터 캐싱 데코레이터
+from functools import lru_cache
+from datetime import datetime, timedelta
+def timed_cache(seconds: int = 300):
+    def decorator(func):
+        cache = {}
+        def wrapper(*args, **kwargs):
+            key = str(args) + str(kwargs)
+            if key in cache:
+                result, timestamp = cache[key]
+                if datetime.now() - timestamp < timedelta(seconds=seconds):
+                    return result
+            result = func(*args, **kwargs)
+            cache[key] = (result, datetime.now())
+            return result
+        return wrapper
+    return decorator`
+  },
+  {
+    language: 'java',
+    code: `// 제네릭 빌더 패턴
+public class GenericBuilder<T> {
+    private final Supplier<T> instantiator;
+    private List<Consumer<T>> modifiers = new ArrayList<>();
+    public GenericBuilder(Supplier<T> instantiator) {
+        this.instantiator = instantiator;
+    }
+    public <V> GenericBuilder<T> with(BiConsumer<T, V> consumer, V value) {
+        modifiers.add(instance -> consumer.accept(instance, value));
+        return this;
+    }
+    public T build() {
+        T instance = instantiator.get();
+        modifiers.forEach(modifier -> modifier.accept(instance));
+        return instance;
+    }
+}`
+  },
+  {
+    language: 'typescript',
+    code: `// 커스텀 리액트 훅: 무한 스크롤
+const useInfiniteScroll = <T>(
+  fetchMore: () => Promise<T[]>,
+  options = { threshold: 100 }
+) => {
+  const [items, setItems] = useState<T[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  useEffect(() => {
+    const handleScroll = async () => {
+      if (
+        window.innerHeight + window.scrollY >=
+        document.documentElement.scrollHeight - options.threshold
+      ) {
+        if (!loading && hasMore) {
+          setLoading(true);
+          const newItems = await fetchMore();
+          setHasMore(newItems.length > 0);
+          setItems(prev => [...prev, ...newItems]);
+          setLoading(false);
+        }
+      }
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [loading, hasMore]);
+  return { items, loading, hasMore };
+};`
+  },
+  {
+    language: 'go',
+    code: `// 고루틴을 사용한 동시성 작업 처리
+func processItems(items []string) []string {
+    numWorkers := 3
+    jobs := make(chan string, len(items))
+    results := make(chan string, len(items))
+    // 워커 생성
+    for i := 0; i < numWorkers; i++ {
+        go worker(jobs, results)
+    }
+    // 작업 전달
+    for _, item := range items {
+        jobs <- item
+    }
+    close(jobs)
+    // 결과 수집
+    processed := make([]string, 0, len(items))
+    for i := 0; i < len(items); i++ {
+        processed = append(processed, <-results)
+    }
+    return processed
+}`
+  },
+  {
+    language: 'rust',
+    code: `// 안전한 싱글톤 패턴
+use std::sync::{Arc, Mutex, Once};
+use std::sync::atomic::{AtomicBool, Ordering};
+pub struct Singleton {
+    data: String,
+}
+pub struct SingletonWrapper {
+    instance: Arc<Mutex<Singleton>>,
+    initialized: AtomicBool,
+}
+impl SingletonWrapper {
+    pub fn get_instance() -> Arc<Mutex<Singleton>> {
+        static mut SINGLETON: Option<SingletonWrapper> = None;
+        static ONCE: Once = Once::new();
+        unsafe {
+            ONCE.call_once(|| {
+                SINGLETON = Some(SingletonWrapper {
+                    instance: Arc::new(Mutex::new(Singleton {
+                        data: String::new(),
+                    })),
+                    initialized: AtomicBool::new(false),
+                });
+            });
+            SINGLETON.as_ref().unwrap().instance.clone()
+        }
+    }
+}`
+  },
+  {
+    language: 'sql',
+    code: `-- 계층형 데이터 쿼리 (재귀 CTE)
+WITH RECURSIVE CommentHierarchy AS (
+    -- 기본 케이스: 최상위 댓글
+    SELECT 
+        id,
+        content,
+        parent_id,
+        author,
+        created_at,
+        0 as depth,
+        CAST(id AS VARCHAR(1000)) as path
+    FROM comments
+    WHERE parent_id IS NULL
+    UNION ALL
+    -- 재귀 케이스: 자식 댓글
+    SELECT 
+        c.id,
+        c.content,
+        c.parent_id,
+        c.author,
+        c.created_at,
+        ch.depth + 1,
+        ch.path || '-' || c.id
+    FROM comments c
+    JOIN CommentHierarchy ch ON c.parent_id = ch.id
+)
+SELECT * FROM CommentHierarchy
+ORDER BY path;`
   }
 ];
 
@@ -143,31 +313,30 @@ const blogElements = [
 export const generateTechHeaders = (content: string): string => {
   // 글 길이에 따라 추가할 주제 수 결정
   const contentLength = content.length;
-  let numTopics = 2; // 기본 주제 수
+  let numTopics = 3;
 
-  if (contentLength > 3000) numTopics = 3;
-  if (contentLength > 5000) numTopics = 4;
-  if (contentLength > 8000) numTopics = 5;
+  if (contentLength > 2000) numTopics = 4;
+  if (contentLength > 4000) numTopics = 5;
+  if (contentLength > 6000) numTopics = 6;
 
   // 랜덤하게 카테고리 선택
   const categories = Object.keys(techTopics);
   const selectedCategory = categories[Math.floor(Math.random() * categories.length)];
   const topics = techTopics[selectedCategory as keyof typeof techTopics];
-
+  
   // 랜덤하게 주제 선택
   const selectedTopics = [...topics]
     .sort(() => Math.random() - 0.5)
     .slice(0, numTopics);
-
+  
   // 헤더 생성
   let headers: string[] = [];
   selectedTopics.forEach(topic => {
     headers.push(`## ${topic.title}`);
     
-    // 글이 충분히 길면 서브토픽도 추가
-    if (contentLength > 3000) {
+    if (contentLength > 1500) {
       const numSubtopics = Math.min(
-        Math.floor(contentLength / 2000), // 2000자당 1개의 서브토픽
+        Math.floor(contentLength / 1000),
         topic.subtopics.length
       );
       
@@ -177,10 +346,16 @@ export const generateTechHeaders = (content: string): string => {
       
       selectedSubtopics.forEach(subtopic => {
         headers.push(`### ${subtopic}`);
+        
+        // 20% 확률로만 인용구 추가
+        if (Math.random() < 0.2) {
+          const element = blogElements[Math.floor(Math.random() * blogElements.length)];
+          headers.push(`> ${element.content}`);
+        }
       });
     }
   });
-
+  
   // 컨텐츠에 헤더 삽입
   const contentParts = content.split('\n\n');
   const step = Math.floor(contentParts.length / (headers.length + 1));
@@ -192,36 +367,28 @@ export const generateTechHeaders = (content: string): string => {
     }
   });
 
-  // 코드 블록 추가 (9000자마다)
-  if (contentLength > 9000) {
-    const numCodeBlocks = Math.floor(contentLength / 9000);
+  // 코드 블록 추가 (500자마다)
+  if (contentLength > 500) {
+    const numCodeBlocks = Math.floor(contentLength / 500);
     for (let i = 0; i < numCodeBlocks; i++) {
-      const position = Math.floor((i + 1) * contentParts.length / (numCodeBlocks + 1));
+      // 컨텐츠 전체에 걸쳐 고르게 분포
+      const position = Math.floor((i + 1) * contentParts.length / (numCodeBlocks + 2));
       const codeExample = codeExamples[i % codeExamples.length];
       contentParts.splice(position, 0, `\`\`\`${codeExample.language}\n${codeExample.code}\n\`\`\``);
     }
   }
 
-  // 블로그 요소 추가 (약 3000자마다)
-  if (contentLength > 3000) {
-    const numElements = Math.floor(contentLength / 3000);
-    for (let i = 0; i < numElements; i++) {
-      const position = Math.floor((i + 1) * contentParts.length / (numElements + 2));
+  // 블로그 요소 추가 (1500자마다, 빈도 감소)
+  if (contentLength > 850) {
+    const numElements = Math.floor(contentLength / 850);
+    // 최대 5개로 제한
+    const maxElements = Math.min(numElements, 5);
+    
+    for (let i = 0; i < maxElements; i++) {
+      // 컨텐츠 앞쪽 2/3 영역에만 배치
+      const position = Math.floor((i + 1) * (contentParts.length * 0.67) / (maxElements + 1));
       const element = blogElements[i % blogElements.length];
-      
-      let elementContent = '';
-      switch (element.type) {
-        case 'quote':
-          elementContent = `> ${element.content}`;
-          break;
-        case 'tip':
-        case 'warning':
-        case 'info':
-          elementContent = `:::${element.type}\n${element.content}\n:::`;
-          break;
-      }
-      
-      contentParts.splice(position, 0, elementContent);
+      contentParts.splice(position, 0, `> ${element.content}`);
     }
   }
 

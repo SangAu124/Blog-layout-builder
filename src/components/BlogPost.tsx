@@ -8,6 +8,8 @@ import { generateTechHeaders } from '../utils/contentTransformer';
 import AdBanner from './AdBanner';
 import SideAd from './SideAd';
 import ShareButtons from './ShareButtons';
+import SyntaxHighlighter from 'react-syntax-highlighter';
+import { atomOneDark } from 'react-syntax-highlighter/dist/esm/styles/hljs';
 
 interface BlogPostProps {
   content: string;
@@ -80,7 +82,26 @@ const BlogPost = ({ content: initialContent }: BlogPostProps) => {
   }, []);
 
   const contentParts = content.split('\n\n');
-  const contentWithAds = contentParts.reduce((acc: JSX.Element[], part, index) => {
+  let firstHeader = '';
+  let remainingContent: JSX.Element[] = [];
+
+  // 첫 번째 헤더 찾기
+  for (let i = 0; i < contentParts.length; i++) {
+    if (contentParts[i].startsWith('#')) {
+      firstHeader = contentParts[i];
+      contentParts.splice(i, 1);
+      break;
+    }
+  }
+
+  // 첫 번째 헤더의 ID 생성
+  const firstHeaderWithId = firstHeader.replace(/^(#{1,6})\s(.+)$/gm, (_, hashes, title) => {
+    const id = title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    return `${hashes} ${title} {#${id}}`;
+  });
+
+  // 나머지 컨텐츠 처리
+  remainingContent = contentParts.reduce((acc: JSX.Element[], part, index) => {
     // Add header IDs for scrolling
     const partWithIds = part.replace(/^(#{1,6})\s(.+)$/gm, (_, hashes, title) => {
       const id = title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
@@ -88,17 +109,82 @@ const BlogPost = ({ content: initialContent }: BlogPostProps) => {
     });
 
     acc.push(
-      <ReactMarkdown key={index}>
+      <ReactMarkdown
+        key={`content-${index}`}
+        components={{
+          code({ node, inline, className, children, ...props }) {
+            const match = /language-(\w+)/.exec(className || '');
+            return !inline && match ? (
+              <SyntaxHighlighter
+                language={match[1]}
+                PreTag="div"
+                style={atomOneDark}
+                {...props}
+              >
+                {String(children).replace(/\n$/, '')}
+              </SyntaxHighlighter>
+            ) : (
+              <code className={className} {...props}>
+                {children}
+              </code>
+            );
+          },
+          blockquote: ({ node, children, ...props }) => (
+            <Box
+              component="blockquote"
+              sx={{
+                borderLeft: '4px solid',
+                borderColor: 'primary.main',
+                pl: 2,
+                py: 1,
+                my: 2,
+                bgcolor: 'background.paper',
+                '& p': {
+                  m: 0
+                }
+              }}
+              {...props}
+            >
+              {children}
+            </Box>
+          ),
+          // tip, warning, info 등의 커스텀 컨테이너 처리
+          div: ({ node, className, children, ...props }) => {
+            const match = /language-(\w+)/.exec(className || '');
+            if (className?.includes('tip') || className?.includes('warning') || className?.includes('info')) {
+              const type = className?.split('-')[1] || 'tip';
+              return (
+                <Box
+                  sx={{
+                    p: 2,
+                    my: 2,
+                    borderRadius: 1,
+                    bgcolor: type === 'warning' ? 'warning.light' : 
+                            type === 'info' ? 'info.light' : 'success.light',
+                    '& p': {
+                      m: 0
+                    }
+                  }}
+                  {...props}
+                >
+                  {children}
+                </Box>
+              );
+            }
+            return <div className={className} {...props}>{children}</div>;
+          }
+        }}
+      >
         {partWithIds}
       </ReactMarkdown>
     );
     
-    // 첫 광고는 15줄 이후에 표시하고, 그 다음부터는 18-23줄 간격으로 랜덤하게 표시
+    // 광고 삽입 로직
     const minLines = 15;
     const randomInterval = Math.floor(Math.random() * 6 + 20); // 18-23 사이의 랜덤 값
     
     if (
-      (index === minLines) || // 첫 광고는 정확히 15줄 후에
+      (index === minLines) || // 첫 광고는 15줄 후에
       (index > minLines && (index - minLines) % randomInterval === 0) // 그 이후는 랜덤 간격으로
     ) {
       acc.push(<AdBanner key={`ad-${index}`} />);
@@ -106,6 +192,12 @@ const BlogPost = ({ content: initialContent }: BlogPostProps) => {
     
     return acc;
   }, []);
+
+  // 최종 컨텐츠 조합
+  const contentWithAds = [
+    <ReactMarkdown key="first-header">{firstHeaderWithId}</ReactMarkdown>,
+    ...remainingContent
+  ];
 
   return (
     <Box sx={{ display: 'flex', gap: 4, width: '100%' }}>
@@ -119,69 +211,61 @@ const BlogPost = ({ content: initialContent }: BlogPostProps) => {
           top: 80,
           maxHeight: 'calc(100vh - 100px)',
           overflowY: 'auto',
-          display: { xs: 'none', md: 'block' },
-          flexShrink: 0,
-          '&::-webkit-scrollbar': {
-            width: '4px',
-          },
-          '&::-webkit-scrollbar-track': {
-            background: theme.palette.mode === 'light' ? '#f1f1f1' : '#2d2d2d',
-          },
-          '&::-webkit-scrollbar-thumb': {
-            background: theme.palette.mode === 'light' ? '#888' : '#555',
-            borderRadius: '4px',
-          },
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 1,
+          backgroundColor: 'background.paper',
+          borderRadius: 1,
+          border: '1px solid',
+          borderColor: 'divider',
         }}
       >
-        <Typography variant="h6" gutterBottom sx={{ mb: 3, fontWeight: 700 }}>
+        <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
           목차
         </Typography>
-        <Box sx={{ 
-          borderLeft: '2px solid',
-          borderColor: theme.palette.mode === 'light' ? 'grey.200' : 'grey.800',
-          pl: 2,
-          ml: 1 
-        }}>
-          {toc.map((item, index) => (
-            <Typography
-              key={index}
-              variant="body2"
-              component="a"
-              href={`#${item.id}`}
-              sx={{
-                display: 'block',
-                mb: 1.5,
-                pl: (item.level - 2) * 2,
-                cursor: 'pointer',
-                textDecoration: 'none',
-                color: activeSection === item.id ? 'primary.main' : 'text.secondary',
-                fontWeight: activeSection === item.id ? 700 : 400,
-                fontSize: item.level === 2 ? '0.9rem' : '0.85rem',
-                transition: 'all 0.2s ease',
-                '&:hover': { 
-                  color: 'primary.main',
-                  pl: (item.level - 2) * 2 + 0.5,
-                },
-                position: 'relative',
-                ...(activeSection === item.id && {
-                  '&::before': {
-                    content: '""',
-                    position: 'absolute',
-                    left: -2,
-                    top: '50%',
-                    transform: 'translate(-50%, -50%)',
-                    width: '6px',
-                    height: '6px',
-                    borderRadius: '50%',
-                    bgcolor: 'primary.main',
+        {toc.length > 0 && (
+          <Box sx={{ 
+            position: 'relative',
+            '& > :first-of-type': {
+              position: 'sticky',
+              top: 0,
+              backgroundColor: 'background.paper',
+              zIndex: 1,
+              pb: 1,
+              borderBottom: '1px solid',
+              borderColor: 'divider',
+            }
+          }}>
+            {toc.map((item, index) => (
+              <Typography
+                key={item.id}
+                variant="body2"
+                component="a"
+                href={`#${item.id}`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  const element = document.getElementById(item.id);
+                  if (element) {
+                    element.scrollIntoView({ behavior: 'smooth' });
                   }
-                })
-              }}
-            >
-              {item.text}
-            </Typography>
-          ))}
-        </Box>
+                }}
+                sx={{
+                  display: 'block',
+                  pl: item.level * 1.5,
+                  py: 0.5,
+                  color: activeSection === item.id ? 'primary.main' : 'text.primary',
+                  textDecoration: 'none',
+                  '&:hover': {
+                    color: 'primary.main',
+                    backgroundColor: 'action.hover',
+                  },
+                }}
+              >
+                {item.text}
+              </Typography>
+            ))}
+          </Box>
+        )}
       </Paper>
 
       {/* Main content */}
